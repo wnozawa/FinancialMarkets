@@ -1,5 +1,5 @@
 
-# Compute the solution for the difference equations of the market equilibrium in Holden & Subrahmanyam (1994)
+# Compute the solution for the difference equations of the market equilibrium in Holden & Subrahmanyam (1994, EL)
 # Check the effect of liquidity order variance (su2) on price discovery (S)
 #
 # by Wataru Nozawa
@@ -41,11 +41,11 @@ for idx_su2 in 1:N_su2
     # functions for solution
     su2 = su2s[idx_su2]
 
-    for_a_n_1(a_n, l_n) = (1-a_n*l_n + A*l_n*su2*dt/2)/(l_n*(M*(1-2*a_n*l_n) + 1 + A*l_n*su2*dt)^2)
+    for_a_n_1(a_n, l_n) = (1-a_n*l_n + A*l_n*su2*dt/2)/(l_n*(M*(1-2*a_n*l_n) + 1 + A*l_n*su2*dt)^2)  # equation (7)
 
-    for_l_n(l_n, a_n, S_n) = l_n^3*su2*(2*M*a_n-A*su2*dt)*dt - l_n^2*su2*(M+1)*dt - 2*M*a_n*S_n*l_n + M*S_n
+    for_l_n(l_n, a_n, S_n) = l_n^3*su2*(2*M*a_n-A*su2*dt)*dt - l_n^2*su2*(M+1)*dt - 2*M*a_n*S_n*l_n + M*S_n  # equation (23)
 
-    for_S_n_1(l_n, S_n) = S_n/(1-l_n^2*su2*dt/S_n)
+    for_S_n_1(l_n, S_n) = S_n/(1-l_n^2*su2*dt/S_n)  # equation (22 & 21)
 
 
 
