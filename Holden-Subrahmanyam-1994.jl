@@ -1,6 +1,7 @@
 
 # Compute the solution for the difference equations of the market equilibrium in Holden & Subrahmanyam (1994)
-# check the effect of liquidity order variance (su2) on price discovery (S)
+# Check the effect of liquidity order variance (su2) on price discovery (S)
+#
 # by Wataru Nozawa
 # June 18, 2019
 
