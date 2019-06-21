@@ -17,82 +17,110 @@ N = 4  # number of auctions
 M = 3  # number of informed
 
 sv = 1  # variance of v, fundamental value of the asset
-A = 0  # risk aversion parameter
-su2s = [0.25 0.5 1 2 4]  # variance of liquidity trader order size
-S_0 = 1  # asset value variance
-M = 1  # number of informed traders
+
+S_0 = 1  # conditional variance of [estimate of v given all signals]
+
+chi = 0.2
+
+theta = 3
+
+L_0 = S_0/theta^2 + chi*(M-1)/M  # variance of signal
+O_0 = S_0/theta^2 - chi/M  # covariance of signal
+
 
 ## boundary condition for a_N
 
 a_N = 0
+ps_N = 0
+m_N = 0
+d_N = 0
 
 
-## Intial guess for S_N
-
-S_N = 0.02
 
 # variables for storing solution
-N_su2 = length(su2s)
-a = zeros(N_su2,N)
-S = zeros(N_su2,N)
-l = zeros(N_su2,N)
+a = zeros(1,N)
+ps = zeros(1,N)
+m = zeros(1,N)
+d = zeros(1,N)
+l = zeros(1,N)
+g = zeros(1,N)
+b = zeros(1,N)
+d = zeros(1,N)
+eta = zeros(1,N)
+ph = zeros(1,N)
+L = zeros(1,N)
+O = zeros(1,N)
+S = zeros(1,N)
+
+## Intial guess for L_N
+
+L[N] = S_0/theta^2 + chi*(M-1)/M
+
+O[N] = L[N] - chi
+S[N] = (L[N] + (M-1)*O[N])*theta^2/M
 
 
 # solve
 
-for idx_su2 in 1:N_su2
-    # functions for solution
-    su2 = su2s[idx_su2]
+## functions for solution
 
-    for_a_n_1(a_n, l_n) = (1-a_n*l_n + A*l_n*su2*dt/2)/(l_n*(M*(1-2*a_n*l_n) + 1 + A*l_n*su2*dt)^2)  # equation (7)
+function eq_l_n(l_n, S_n, ps_n, L_n)
+    fourth = l_n^4*(theta*sv^4*(M-1)*chi/(M^2*S_n^2))
+    third = l_n^3*sv^2*ps_n*L_n/S_n
+    second = -l_n^2*(theta*sv^2/M*S_n)*((M+1)*L_n - (M-1)*chi)
+    first = -l_n*L_n*ps_n
+    constant = (theta/M)*(M*L_n - (M-1)*chi)
+    return fourth + third + second + first + constant  # equation (36)
+end
 
-    for_l_n(l_n, a_n, S_n) = l_n^3*su2*(2*M*a_n-A*su2*dt)*dt - l_n^2*su2*(M+1)*dt - 2*M*a_n*S_n*l_n + M*S_n  # equation (23)
+get_beta(l_n, S_n) = l_n*theta*sv^2/(M*S_n)  # third equation in Proposition 1
 
-    for_S_n_1(l_n, S_n) = S_n/(1-l_n^2*su2*dt/S_n)  # equation (22 & 21)
+get_phi(O_n, l_n, b_n, L_n) = (O_n + (l_n*b_n/theta)*chi)/(L_n - (l_n*b_n/theta)*(M-1)*chi)  # equation (35)
 
+get_gamma(m_n, l_n, b_n) = (1-2*m_n*l_n)*(1-(l_n*b_n*(M-1)/theta))/(2*l_n*(1-m_n*l_n))  # second equation in Proposition 1
+get_eta(phi_n) = theta/M*(1+(M-1)*phi_n)
 
+get_alpha(eta_n, l_n, b_n, a_n, ph_n) = (eta_n - l_n*b_n*(1+(M-1)*ph_n))*b_n + a_n*(1 - (l_n*b_n/theta)*(1+ph_n*(M-1)))^2
+get_psi(eta_n, l_n, b_n, a_n, ph_n, gamma_n, psi_n) = (eta_n - l_n*b_n*(1+(M-1)*ph_n))*gamma_n - l_n*gamma_n*b_n + b_n*(1-l_n*b_n*(M-1)/theta) + psi_n*(1-l_n*b_n*(1+(M-1)*ph_n)/theta)*(1-l_n*b_n*(M-1)/theta - l_n*gamma_n)
+get_mu(l_n, gamma_n, b_n, m_n) = -l_n*gamma_n^2 + gamma_n*(1-l_n*b_n*(M-1)/theta) + m_n*(1-l_n*b_n*(M-1)/theta - l_n*gamma_n)^2
 
-    a[idx_su2,N] = a_N
+get_L(L_n, l_n, b_n) = (L_n - (l_n*b_n/theta)*(M-1)*chi)/(1-M*l_n*b_n/theta)
+get_O(O_n, l_n, b_n) = (O_n + (l_n*b_n/theta)*chi)/(1-(M*l_n*b_n/theta))
 
-    function diff_system(S_N0)
-        S[idx_su2,N] = S_N0
-
-        # repeat the following for n=N, N-1, ..., 2
-        for n in [N:-1:2;]
-            # compute lam_n from S_n & a_n
-            for_l(l) = for_l_n(l, a[idx_su2,n],S[idx_su2,n])
-            l[idx_su2,n] = find_zero(for_l, 0.5)
-
-            # compute S_n-1 from lam_n & S_n
-            S[idx_su2,n-1] = for_S_n_1(l[idx_su2,n], S[idx_su2,n])
-
-            # compute a_n-1 from lam_n & a_n
-            a[idx_su2,n-1] = for_a_n_1(a[idx_su2,n], l[idx_su2,n])
-        end
-        return S[idx_su2,1] - S_0
-    end
-    # solve
-
-    S_N_eqm = find_zero(diff_system, 0.02)
-    S[N] = S_N_eqm
-
-    # repeat the following for n=N, N-1, ..., 2
-    for n in [N:-1:2;]
-        # compute lam_n from S_n & a_n
-        for_l(l) = for_l_n(l, a[idx_su2,n],S[idx_su2,n])
-        l[idx_su2,n] = find_zero(for_l, 0.5)
-
-        # compute S_n-1 from lam_n & S_n
-        S[idx_su2,n-1] = for_S_n_1(l[idx_su2,n], S[idx_su2,n])
-
-        # compute a_n-1 from lam_n & a_n
-        a[idx_su2,n-1] = for_a_n_1(a[idx_su2,n], l[idx_su2,n])
-    end
+function get_delta(d_n, a_n, l_n, b_n, L_n_1, O_n_1)
+    Var = (L_n_1^2 - O_n_1^2)/L_n_1
+    Cov = O_n_1*(L_n_1 - O_n_1)/L_n_1
+    return d_n + a_n*l_n^2*sv^2/theta^2 + a_n*(l_n^2*b_n^2/theta^2)*(M-1)*(Var + (M-2)*Cov)
 end
 
 
-# draw figures
+## solve
 
-plot(l[:,2:N]')
+for n in [N:-1:2;]
+    # compute lam_n from S_n & a_n
+    eq_l(l) = eq_l_n(l, S[n], ps[n], L[n])
+    l[n] = find_zero(eq_l, (0, S[n]^(1/2)/sv))
+
+    b[n] = get_beta(l[n], S[n])
+    ph[n] = get_phi(O[n], l[n], b[n], L[n])
+    g[n] = get_gamma(m[n], l[n], b[n])
+    eta[n] = get_eta(ph[n])
+
+    a[n-1] = get_alpha(eta[n], l[n], b[n], a[n], ph[n])
+    ps[n-1] = get_psi(eta[n], l[n], b[n], a[n], ph[n], g[n], ps[n])
+    m[n-1] = get_mu(l[n], g[n], b[n], m[n])
+
+    L[n-1] = get_L(L[n], l[n], b[n])
+    O[n-1] = get_O(O[n], l[n], b[n])
+    S[n-1] = (L[n-1] + (M-1)*O[n-1])*theta^2/M
+    d[n-1] = get_delta(d[n], a[n], l[n], b[n], L[n-1], O[n-1])
+end
+
+
+# solve
+
+## draw figures
+
+plot(l[2:N]')
 
 plot(S')
