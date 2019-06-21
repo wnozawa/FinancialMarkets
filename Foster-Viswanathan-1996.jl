@@ -1,33 +1,33 @@
-
-# Compute the solution for the difference equations of the market equilibrium in Holden & Subrahmanyam (1994, EL)
-# Check the effect of liquidity order variance (su2) on price discovery (S)
+# Compute the solution for the difference equations of the market equilibrium in
+# Foster & Viswanathan (1996, JF)
 #
 # by Wataru Nozawa
-# June 18, 2019
+# June 21, 2019
 
 # Pkg.add("Roots")
 using Roots
 
 # Pkg.add("Plots")
-
 using Plots
 gr()
 
-# Parameters
+## Parameters
 
-N = 20  # number of auctions
-dt = 1/N  # time interval
+N = 4  # number of auctions
+M = 3  # number of informed
+
+sv = 1  # variance of v, fundamental value of the asset
 A = 0  # risk aversion parameter
 su2s = [0.25 0.5 1 2 4]  # variance of liquidity trader order size
 S_0 = 1  # asset value variance
 M = 1  # number of informed traders
 
-# boundary condition for a_N
+## boundary condition for a_N
 
 a_N = 0
 
 
-# Intial guess for S_N
+## Intial guess for S_N
 
 S_N = 0.02
 
