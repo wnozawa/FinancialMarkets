@@ -11,7 +11,7 @@ using Roots
 using Plots
 gr()
 
-## Parameters
+#--- Parameters
 
 N = 4  # number of auctions
 M = 3  # number of informed
@@ -28,7 +28,7 @@ L_0 = S_0/theta^2 + chi*(M-1)/M  # variance of signal
 O_0 = S_0/theta^2 - chi/M  # covariance of signal
 
 
-## boundary condition for a_N
+#--- boundary condition for a_N
 
 a_N = 0
 ps_N = 0
@@ -37,22 +37,22 @@ d_N = 0
 
 
 
-# variables for storing solution
-a = zeros(1,N)
-ps = zeros(1,N)
-m = zeros(1,N)
-d = zeros(1,N)
-l = zeros(1,N)
-g = zeros(1,N)
-b = zeros(1,N)
-d = zeros(1,N)
-eta = zeros(1,N)
-ph = zeros(1,N)
-L = zeros(1,N)
-O = zeros(1,N)
-S = zeros(1,N)
+# # variables for storing solution
+# a = zeros(1,N)
+# ps = zeros(1,N)
+# m = zeros(1,N)
+# d = zeros(1,N)
+# l = zeros(1,N)
+# g = zeros(1,N)
+# b = zeros(1,N)
+# d = zeros(1,N)
+# eta = zeros(1,N)
+# ph = zeros(1,N)
+# L = zeros(1,N)
+# O = zeros(1,N)
+# S = zeros(1,N)
 
-## Intial guess for L_N
+#--- Intial guess for L_N
 
 L[N] = S_0/theta^2 + chi*(M-1)/M
 
@@ -62,7 +62,7 @@ S[N] = (L[N] + (M-1)*O[N])*theta^2/M
 
 # solve
 
-## functions for solution
+#--- functions for solution
 
 function eq_l_n(l_n, S_n, ps_n, L_n)
     fourth = l_n^4*(theta*sv^4*(M-1)*chi/(M^2*S_n^2))
@@ -94,31 +94,52 @@ function get_delta(d_n, a_n, l_n, b_n, L_n_1, O_n_1)
 end
 
 
-## solve
+#--- solve
 
-for n in [N:-1:2;]
-    # compute lam_n from S_n & a_n
-    eq_l(l) = eq_l_n(l, S[n], ps[n], L[n])
-    l[n] = find_zero(eq_l, (0, S[n]^(1/2)/sv))
+function solve_system(L_N)
+    # variables for storing solution
+    a = zeros(1,N)
+    ps = zeros(1,N)
+    m = zeros(1,N)
+    d = zeros(1,N)
+    l = zeros(1,N)
+    g = zeros(1,N)
+    b = zeros(1,N)
+    d = zeros(1,N)
+    eta = zeros(1,N)
+    ph = zeros(1,N)
+    L = zeros(1,N)
+    O = zeros(1,N)
+    S = zeros(1,N)
 
-    b[n] = get_beta(l[n], S[n])
-    ph[n] = get_phi(O[n], l[n], b[n], L[n])
-    g[n] = get_gamma(m[n], l[n], b[n])
-    eta[n] = get_eta(ph[n])
+    L[N] = L_N
+    O[N] = L_N - chi
+    S[N] = (L_N + (M-1)*O[N])*theta^2/M
 
-    a[n-1] = get_alpha(eta[n], l[n], b[n], a[n], ph[n])
-    ps[n-1] = get_psi(eta[n], l[n], b[n], a[n], ph[n], g[n], ps[n])
-    m[n-1] = get_mu(l[n], g[n], b[n], m[n])
+    for n in [N:-1:2;]
+        # compute lam_n from S_n & a_n
+        eq_l(l) = eq_l_n(l, S[n], ps[n], L[n])
+        l[n] = find_zero(eq_l, (0, S[n]^(1/2)/sv))
 
-    L[n-1] = get_L(L[n], l[n], b[n])
-    O[n-1] = get_O(O[n], l[n], b[n])
-    S[n-1] = (L[n-1] + (M-1)*O[n-1])*theta^2/M
-    d[n-1] = get_delta(d[n], a[n], l[n], b[n], L[n-1], O[n-1])
+        b[n] = get_beta(l[n], S[n])
+        ph[n] = get_phi(O[n], l[n], b[n], L[n])
+        g[n] = get_gamma(m[n], l[n], b[n])
+        eta[n] = get_eta(ph[n])
+
+        a[n-1] = get_alpha(eta[n], l[n], b[n], a[n], ph[n])
+        ps[n-1] = get_psi(eta[n], l[n], b[n], a[n], ph[n], g[n], ps[n])
+        m[n-1] = get_mu(l[n], g[n], b[n], m[n])
+
+        L[n-1] = get_L(L[n], l[n], b[n])
+        O[n-1] = get_O(O[n], l[n], b[n])
+        S[n-1] = (L[n-1] + (M-1)*O[n-1])*theta^2/M
+        d[n-1] = get_delta(d[n], a[n], l[n], b[n], L[n-1], O[n-1])
+    end
+    return L[1] - L_0
 end
 
-
 # solve
-
+L_N_eqm = find_zero(solve_system, (0, 5))
 ## draw figures
 
 plot(l[2:N]')
